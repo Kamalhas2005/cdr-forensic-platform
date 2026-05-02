@@ -359,6 +359,25 @@ http://127.0.0.1:5000
 
 ---
 
+---
+
+## 📊 Dataset & Testing Environment
+
+This project was evaluated using publicly available document samples and controlled testing environments.
+
+- Sample files (PDF and OOXML formats) were sourced from datasets available on Kaggle
+- Approximately **80–90 files** were analyzed to validate system behavior across multiple threat scenarios
+- Testing was performed inside a **VMware-based isolated environment** to ensure safe handling of potentially malicious documents
+
+This setup allowed controlled experimentation with:
+
+- Embedded objects
+- External links and IOCs
+- Script-based threats
+- Document structure manipulation
+
+👉 Ensures both **safety** and **realistic threat evaluation**
+
 ## 📁 12. Runtime Directory Structure
 
 The system dynamically creates the following structure:
