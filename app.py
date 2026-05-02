@@ -16,7 +16,8 @@ app = Flask(__name__)
 # ======================================================
 # PATH CONFIG
 # ======================================================
-BASE_DIR = str(Path("C:/CDR_Output").resolve())
+# ✅ new (portable)
+BASE_DIR = str((Path(__file__).parent / "data").resolve())
 
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 OUTPUT_DIR = os.path.join(BASE_DIR, "sanitized")

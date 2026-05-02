@@ -5,10 +5,12 @@ from pikepdf import Pdf, Name
 from db import get_db, init_db
 
 # ================= CONFIG =================
-DRIVE_ROOT = "C:/CDR_Output"
-UPLOAD_DIR = os.path.join(DRIVE_ROOT, "uploads")
-OUTPUT_DIR = os.path.join(DRIVE_ROOT, "sanitized")
-DB_PATH = os.path.join(DRIVE_ROOT, "db", "cdr.db")
+# ✅ new (portable)
+BASE_DIR = str((Path(__file__).parent / "data").resolve())
+
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+OUTPUT_DIR = os.path.join(BASE_DIR, "sanitized")
+DB_PATH = os.path.join(BASE_DIR, "db", "cdr.db")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
