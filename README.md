@@ -439,7 +439,8 @@ Potential extensions for production-level deployment:
 
 ## 👨‍💻 Author
 
-**Kamal Has**
+**Kamalhas Chikudu**  
+🔗 https://github.com/Kamalhas2005
 
 ---
 
