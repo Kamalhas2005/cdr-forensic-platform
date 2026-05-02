@@ -164,7 +164,7 @@ def init_db(db_path=None):
         FROM scans s
         LEFT JOIN detections d ON s.id = d.scan_id
         GROUP BY s.id
-        ORDER BY s.scanned_at DESC
+        ORDER BY s.id DESC
         """)
 
         # ==================================================

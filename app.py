@@ -44,7 +44,34 @@ def get_db():
 @app.route("/")
 def dashboard():
     db = get_db()
-    rows = db.execute("SELECT * FROM cdr_logs").fetchall()
+
+    search = request.args.get("search", "").strip()
+
+    # ✅ NEW: pagination variables
+    page = int(request.args.get("page", 1))
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    if search:
+        rows = db.execute(
+            "SELECT * FROM cdr_logs WHERE original_filename LIKE ? LIMIT ? OFFSET ?",
+            (f"%{search}%", per_page, offset)
+        ).fetchall()
+
+        total = db.execute(
+            "SELECT COUNT(*) FROM cdr_logs WHERE original_filename LIKE ?",
+            (f"%{search}%",)
+        ).fetchone()[0]
+
+    else:
+        rows = db.execute(
+            "SELECT * FROM cdr_logs LIMIT ? OFFSET ?",
+            (per_page, offset)
+        ).fetchall()
+
+        total = db.execute(
+            "SELECT COUNT(*) FROM cdr_logs"
+        ).fetchone()[0]
 
     threat_data = Counter(r["threat_found"] for r in rows if r["threat_found"])
     action_data = Counter(r["action"] for r in rows if r["action"])
@@ -55,9 +82,11 @@ def dashboard():
         rows=rows,
         threat_data=dict(threat_data),
         action_data=dict(action_data),
-        risk_data=dict(risk_data)
+        risk_data=dict(risk_data),
+        search=search,
+        page=page,
+        total_pages=(total // per_page) + (1 if total % per_page else 0)
     )
-
 # ======================================================
 # IOC DASHBOARD (FIXED FOR PPT/OOXML)
 # ======================================================
@@ -250,7 +279,6 @@ a:hover{text-decoration:underline}
     top:0;
     z-index:10
 }
-
 .top-action-btn{
     padding:10px 18px;
     border-radius:999px;
@@ -262,18 +290,17 @@ a:hover{text-decoration:underline}
     font-size:14px;
     transition:all 0.2s ease
 }
-
 .top-action-btn:hover{
     background:#0ea5e9;
     color:white;
     border-color:#0ea5e9
 }
-
-
 </style>
 </head>
 <body>
+
 <div class="header">🛡 CDR Forensic Platform</div>
+
 <div class="top-actions">
     <a class="top-action-btn" href="/ioc">🧬 IOC Dashboard</a>
     <a class="top-action-btn" href="/evaluation">🧪 Evaluation Report</a>
@@ -282,8 +309,20 @@ a:hover{text-decoration:underline}
     <a class="top-action-btn" href="/export">⬇ Export CSV</a>
 </div>
 
-
 <div class="container">
+<div class="card">
+<form method="GET" action="/">
+<input 
+    type="text" 
+    name="search" 
+    placeholder="Search file name..." 
+    value="{{ search }}" 
+    style="padding:10px;border-radius:8px;border:none;width:250px;margin-right:10px"
+>
+<button class="btn" type="submit">Search</button>
+<a href="/" class="btn" style="background:#64748b">Reset</a>
+</form>
+</div>
 
 <div class="card upload-box">
 <form action="/upload" method="POST" enctype="multipart/form-data">
@@ -311,12 +350,24 @@ a:hover{text-decoration:underline}
 </div>
 
 <div class="card table-wrap">
+
+<form method="POST" action="/bulk-delete">
+
 <table>
 <tr>
-<th>ID</th><th>File</th><th>Threats</th><th>Action</th><th>Risk</th><th>Time</th><th>View</th>
+<th>Select</th>
+<th>ID</th>
+<th>File</th>
+<th>Threats</th>
+<th>Action</th>
+<th>Risk</th>
+<th>Time</th>
+<th>View</th>
 </tr>
+
 {% for r in rows %}
 <tr>
+<td><input type="checkbox" name="selected_ids" value="{{ r.sno }}"></td>
 <td>{{ r.sno }}</td>
 <td><a href="/scan/{{ r.sno }}">{{ r.original_filename }}</a></td>
 <td>{{ r.threat_found }}</td>
@@ -332,12 +383,34 @@ a:hover{text-decoration:underline}
 </td>
 </tr>
 {% endfor %}
+
 </table>
+
+<br>
+
+<button class="btn" type="submit" onclick="return confirm('Delete selected files?')">
+🗑 Delete Selected
+</button>
+
+</form>
+<div style="margin-top:15px;display:flex;gap:10px;align-items:center">
+
+{% if page > 1 %}
+<a class="btn" href="/?page={{ page-1 }}&search={{ search }}">⬅ Prev</a>
+{% endif %}
+
+<span>Page {{ page }} of {{ total_pages }}</span>
+
+{% if page < total_pages %}
+<a class="btn" href="/?page={{ page+1 }}&search={{ search }}">Next ➡</a>
+{% endif %}
+
 </div>
 
-
+</div>
 
 <div class="footer">CDR Platform • DFIR Engine • SOC Ready</div>
+
 </div>
 </body>
 </html>
@@ -898,6 +971,31 @@ confirming the correctness and practical applicability of the approach.
 @app.route("/cross-evaluation")
 def cross_evaluation():
     return render_template_string(CROSS_EVAL_HTML)
+@app.route("/bulk-delete", methods=["POST"])
+def bulk_delete():
+    db = get_db()
+    ids = request.form.getlist("selected_ids")
+
+    for scan_id in ids:
+        scan = db.execute(
+            "SELECT input_path, output_path FROM scans WHERE id=?",
+            (scan_id,)
+        ).fetchone()
+
+        if scan:
+            try:
+                if os.path.exists(scan["input_path"]):
+                    os.remove(scan["input_path"])
+                if os.path.exists(scan["output_path"]):
+                    os.remove(scan["output_path"])
+            except:
+                pass
+
+            db.execute("DELETE FROM detections WHERE scan_id=?", (scan_id,))
+            db.execute("DELETE FROM scans WHERE id=?", (scan_id,))
+
+    db.commit()
+    return "<script>location.href='/'</script>"
 
 @app.route("/evaluation/download")
 def download_evaluation():
