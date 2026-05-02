@@ -359,8 +359,6 @@ http://127.0.0.1:5000
 
 ---
 
----
-
 ## 📊 Dataset & Testing Environment
 
 This project was evaluated using publicly available document samples and controlled testing environments.
